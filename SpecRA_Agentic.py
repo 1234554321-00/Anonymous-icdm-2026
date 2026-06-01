@@ -1,52 +1,3 @@
-"""
-specra_paper_full.py
-====================
-Single-file reference implementation of:
-
-    SpecRA: Compressing Agentic LLM Recommenders via
-            Functional Spectral Distillation
-
-This file implements the *paper's full experimental protocol*, with every
-algorithmic detail of Section 4 followed exactly:
-
-  * Empirical NTK is COSINE-NORMALIZED per Eq. (1). The Jacobian is never
-    formed; the cosine NTK matvec is realised as
-            Theta_norm v = D^{-1} ( J J^T ( D^{-1} v ) )
-    where D = diag( sqrt(<J_i,J_i>) ) is obtained by Hutchinson probes
-    against (J J^T) e_i for the canonical basis e_i (cost: b extra matvecs
-    once per (step,layer), amortised across all SLQ probes).
-  * Stochastic Lanczos Quadrature with m=8 Rademacher probes and k=20
-    Lanczos steps (Eqs. 4-5), with full re-orthogonalisation.
-  * Debiased Sinkhorn divergence (Eq. 6) computed in log space.
-  * Curriculum weights are softmax over DETACHED per-(t,l) gaps (Eq. 9).
-  * Epsilon exponentially annealed 1.0 -> 0.05 over 500 training steps.
-  * Total loss   L_total = L_KD + lambda * L_spec   with lambda = 1.0
-    (Eq. 12, default; configurable).
-  * Last L*=2 transformer blocks aligned per step (Section 4).
-  * Step subsampling: \tilde T = 5 reasoning steps (paper's setting).
-
-EXPERIMENTAL SCAFFOLDING (Section 5):
-  * 3 teacher-student pairs:
-        LLaMA-3-8B-Instruct -> LLaMA-3.2-1B-Instruct  (full FT)
-        Qwen2.5-7B-Instruct -> Qwen2.5-0.5B-Instruct  (full FT)
-        OPT-IML-6.7B        -> OPT-IML-1.3B           (LoRA, rank 256)
-  * 4 datasets after 5-core filtering: MovieLens-25M, Amazon-Books, Yelp, Steam
-  * 3 splits: ID, cold-start (CS), cross-domain (CD, leave-one-out over the
-    three text-domain datasets; Steam is excluded from CD per the paper).
-  * 9 baselines + SpecRA + 4 SpecRA-integrated variants:
-        SFT, KL-KD, FDD, DistiLLM, DistiLLM-2,
-        MiniLLM, GKD, SAD, Sharp-Distill,
-        SpecRA (standalone),
-        KL-KD+SpecRA, FDD+SpecRA, DistiLLM+SpecRA, DistiLLM-2+SpecRA.
-  * Evaluation: NDCG@10 (averaged across the relevant datasets per split),
-    GPT-4o-mini coherence (1-100) on multi-step trajectories, latency, memory.
-  * Means over 5 seeds with paired bootstrap (10,000 resamples) at p<0.05.
-
-REQUIREMENTS
-------------
-    torch >= 2.3, transformers >= 4.40, peft >= 0.10, numpy, scipy
-    Optional: openai (only used when --with-coherence is set)
-"""
 
 from __future__ import annotations
 
@@ -100,7 +51,7 @@ except ImportError:
 
 
 # ==========================================================================
-# 0. Config dataclasses (defaults = paper, Section 5)
+# 0. Config dataclasses 
 # ==========================================================================
 
 @dataclass
@@ -329,19 +280,6 @@ def build_cs_split(train: List[SplitEntry], test: List[SplitEntry],
 
 def build_cd_splits(text_domain_datasets: Dict[str, Dataset_]
                     ) -> Dict[str, Tuple[List[SplitEntry], List[SplitEntry]]]:
-    """Cross-domain (leave-one-dataset-out): for each target k in the text-
-    domain datasets, train on union of others, test on held-out test set.
-
-    NOTE on item-id namespaces: SpecRA's CD evaluation needs items addressable
-    across datasets. We construct per-target (train, test) pairs in the
-    *target's* item namespace; the source datasets contribute users only
-    (a user's history is mapped into target items by collaborative bridge).
-    For simplicity here we use the simplest bridge: source users' histories
-    are *truncated to common tokens by metadata key matching*, which is a
-    no-op for our setting and means CD train = each source dataset's full
-    train list, with item ids prefixed by dataset to keep namespaces disjoint.
-    Tokenisation handles dataset-prefixed item strings transparently.
-    """
     out: Dict[str, Tuple[List[SplitEntry], List[SplitEntry]]] = {}
     for target in DATASETS_TEXT_DOMAIN:
         if target not in text_domain_datasets: continue
