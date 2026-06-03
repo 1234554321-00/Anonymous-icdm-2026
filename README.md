@@ -198,8 +198,3 @@ reproducibility claim, and this script is best described in the paper/appendix a
 implementation of the method*.
 
 ---
-
-
-## License
-
-Released for review purposes. Add a license (e.g. MIT) before any public release.
