@@ -199,17 +199,6 @@ implementation of the method*.
 
 ---
 
-## 10. Citation
-
-```bibtex
-@inproceedings{specra2026,
-  title     = {SpecRA: Compressing Agentic LLM Recommenders via Functional Spectral Distillation},
-  author    = {Anonymous},
-  booktitle = {IEEE International Conference on Data Mining (ICDM)},
-  year      = {2026},
-  note      = {Under review}
-}
-```
 
 ## License
 
