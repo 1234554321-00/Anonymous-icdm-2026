@@ -1,0 +1,20 @@
+# ============================================================
+# SpecRA reference implementation - dependencies
+# Tested with Python 3.10 / CUDA 12.x
+# ============================================================
+
+# --- Core (required) ---
+torch>=2.3              # uses torch.func (jvp, vjp, functional_call); forward-mode autodiff
+transformers>=4.40      # AutoModelForCausalLM / AutoTokenizer; LLaMA-3, Qwen2.5, OPT-IML
+numpy>=1.24
+
+# --- Required only for the OPT-IML pair (LoRA student) ---
+peft>=0.10
+
+# --- Recommended for loading large HF checkpoints / fast tokenizers ---
+accelerate>=0.30
+sentencepiece>=0.2
+
+# --- Optional: only needed with --with-coherence (GPT-4o-mini reasoning judge) ---
+# Also requires the OPENAI_API_KEY environment variable to be set.
+openai>=1.0
